@@ -11,3 +11,9 @@ DOCUMENTATION
 
 	See http://godoc.org/github.com/dchest/cache
 
+
+ACKNOWLEDGEMENTS
+
+Some code structure ideas are inspired by YouTube's Vitess implementation of
+LRU cache, but no code was taken from it:
+https://github.com/youtube/vitess/blob/master/go/cache/lru_cache.go
