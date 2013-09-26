@@ -19,7 +19,7 @@ func getIntCheck(t *testing.T, c *Cache, key string, expectedValue int) {
 	if !ok {
 		t.Fatalf("retrieved value %v is not int", x)
 	}
-	if int(x) != expectedValue {
+	if x != expectedValue {
 		t.Fatalf("wrong stored value: expected %d, got %d", expectedValue, x)
 	}
 }
