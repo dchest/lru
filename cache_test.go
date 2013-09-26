@@ -110,10 +110,6 @@ func BenchmarkSet(b *testing.B) {
 	benchSet(b, Config{MaxItems: 1000})
 }
 
-func BenchmarkSetTrackTime(b *testing.B) {
-	benchSet(b, Config{MaxItems: 1000, TrackAccessTime: true})
-}
-
 func benchGet(b *testing.B, config Config) {
 	c := New(config)
 	c.SetBytes("test", make([]byte, 100))
