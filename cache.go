@@ -60,7 +60,7 @@ type Config struct {
 	// An item is removed from cache when trying to get it if the given
 	// time passed since its modification time.
 	//
-	// Set to zero for no expiration.
+	// Set to zero for no expiration (default).
 	Expires time.Duration
 
 	// Function to call when an item is dropped or removed from cache
