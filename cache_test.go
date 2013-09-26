@@ -3,6 +3,7 @@ package cache
 import (
 	"strconv"
 	"testing"
+	"time"
 )
 
 func getIntCheck(t *testing.T, c *Cache, key string, expectedValue int) {
@@ -86,6 +87,16 @@ func TestMaxBytes(t *testing.T) {
 	}
 }
 
+func TestExpiration(t *testing.T) {
+	c := New(Config{Expires: 1 * time.Millisecond})
+	c.Set("hello", "world", 0)
+	time.Sleep(2 * time.Millisecond)
+	_, ok := c.Get("hello")
+	if ok {
+		t.Fatalf("didn't remove expired item")
+	}
+}
+
 func benchSet(b *testing.B, config Config) {
 	c := New(config)
 	bs := make([]byte, 100)
@@ -100,7 +111,7 @@ func BenchmarkSet(b *testing.B) {
 }
 
 func BenchmarkSetTrackTime(b *testing.B) {
-	benchSet(b, Config{MaxItems: 1000, TrackModTime: true, TrackAccessTime: true})
+	benchSet(b, Config{MaxItems: 1000, TrackAccessTime: true})
 }
 
 func benchGet(b *testing.B, config Config) {
@@ -117,5 +128,5 @@ func BenchmarkGet(b *testing.B) {
 }
 
 func BenchmarkGetTrackTime(b *testing.B) {
-	benchGet(b, Config{MaxItems: 1000, TrackModTime: true, TrackAccessTime: true})
+	benchGet(b, Config{MaxItems: 1000, TrackAccessTime: true})
 }

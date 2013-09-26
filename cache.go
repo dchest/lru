@@ -52,11 +52,16 @@ type Config struct {
 	// Maximum byte capacity of cache (unlimited by default).
 	MaxBytes int64
 
-	// Track item modification time (false by default).
-	TrackModTime bool
-
 	// Track item access time (false by default).
 	TrackAccessTime bool
+
+	// Item expiration duration.
+	//
+	// An item is removed from cache when trying to get it if the given
+	// time passed since its modification time.
+	//
+	// Set to zero for no expiration.
+	Expires time.Duration
 
 	// Function to call when an item is dropped or removed from cache
 	// (nil by default).
@@ -142,9 +147,7 @@ func (c *Cache) Set(key string, value interface{}, size int64) {
 	if it.Size < 0 {
 		panic("cache: value has negative size")
 	}
-	if c.config.TrackModTime {
-		it.ModTime = time.Now()
-	}
+	it.ModTime = time.Now()
 	it.AccessTime = it.ModTime
 
 	// Update cache size.
@@ -165,12 +168,18 @@ func (c *Cache) getItemPtr(key string) (it *Item, ok bool) {
 	if !ok {
 		return nil, false
 	}
-	c.l.MoveToFront(elem)
 	it = elem.Value.(*Item)
+	// Check for expiration.
+	if c.config.Expires > 0 && time.Now().Sub(it.ModTime) > c.config.Expires {
+		// Item expired, delete it.
+		c.removeElement(elem)
+		return nil, false
+	}
 	// Update access time.
 	if c.config.TrackAccessTime {
 		it.AccessTime = time.Now()
 	}
+	c.l.MoveToFront(elem)
 	return it, true
 }
 
