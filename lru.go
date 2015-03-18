@@ -1,4 +1,4 @@
-// Copyright 2013 Dmitry Chestnykh. All rights reserved.
+// Copyright 2013-2015 Dmitry Chestnykh. All rights reserved.
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
@@ -10,7 +10,7 @@
 // Example:
 //
 //  // Create a 1 MB cache.
-//  c := cache.New(cache.Config{ MaxBytes: 1024*1024 })
+//  c := lru.New(lru.Config{ MaxBytes: 1024*1024 })
 //  ...
 //  // Query cache and insert item if it's not there.
 //  var x someType
@@ -25,7 +25,7 @@
 //  }
 //  // x now contains the value.
 //
-package cache
+package lru
 
 import (
 	"container/list"
@@ -34,10 +34,13 @@ import (
 	"time"
 )
 
+// Key is any comparable value.
+type Key interface{}
+
 type Cache struct {
 	sync.Mutex
 
-	m map[string]*list.Element
+	m map[Key]*list.Element
 	l *list.List
 
 	size int64
@@ -74,7 +77,7 @@ type Config struct {
 
 // Item represents a cached item with additional information.
 type Item struct {
-	Key        string
+	Key        Key
 	Value      interface{}
 	Size       int64     // byte size of value
 	ModTime    time.Time // when this item was added to cache
@@ -84,7 +87,7 @@ type Item struct {
 // New returns a cache instance configured with the given Config.
 func New(config Config) *Cache {
 	return &Cache{
-		m:      make(map[string]*list.Element, config.MaxItems),
+		m:      make(map[Key]*list.Element, config.MaxItems),
 		l:      list.New(),
 		config: config,
 	}
@@ -94,7 +97,7 @@ func New(config Config) *Cache {
 func (c *Cache) Reset() {
 	c.Lock()
 	defer c.Unlock()
-	c.m = make(map[string]*list.Element, c.config.MaxItems)
+	c.m = make(map[Key]*list.Element, c.config.MaxItems)
 	c.l.Init()
 	c.size = 0
 }
@@ -123,7 +126,7 @@ func (c *Cache) enforceCapacity() {
 
 // Set sets or updates a cache item for the given key to the given value,
 // and the given value size in bytes.
-func (c *Cache) Set(key string, value interface{}, size int64) {
+func (c *Cache) Set(key Key, value interface{}, size int64) {
 	c.Lock()
 	defer c.Unlock()
 
@@ -163,7 +166,7 @@ func (c *Cache) Set(key string, value interface{}, size int64) {
 // updates its access time, and moves it to the front of the list.
 // If there is no such key, it returns nil, false.
 // Cache must be locked.
-func (c *Cache) getItemPtr(key string) (it *Item, ok bool) {
+func (c *Cache) getItemPtr(key Key) (it *Item, ok bool) {
 	elem, ok := c.m[key]
 	if !ok {
 		return nil, false
@@ -185,7 +188,7 @@ func (c *Cache) getItemPtr(key string) (it *Item, ok bool) {
 
 // Get returns a value of item cached under the given key.
 // If there is no such key in the cache, it returns nil, false.
-func (c *Cache) Get(key string) (value interface{}, ok bool) {
+func (c *Cache) Get(key Key) (value interface{}, ok bool) {
 	c.Lock()
 	defer c.Unlock()
 	if it, ok := c.getItemPtr(key); ok {
@@ -195,7 +198,7 @@ func (c *Cache) Get(key string) (value interface{}, ok bool) {
 }
 
 // GetItem returns a copy of item cached under the given key.
-func (c *Cache) GetItem(key string) (it Item, ok bool) {
+func (c *Cache) GetItem(key Key) (it Item, ok bool) {
 	c.Lock()
 	defer c.Unlock()
 	if it, ok := c.getItemPtr(key); ok {
@@ -295,13 +298,13 @@ func (c *Cache) Items() []Item {
 
 // SetBytes is like Set, but accepts a slice of bytes for value,
 // and sets the size to its length.
-func (c *Cache) SetBytes(key string, value []byte) {
+func (c *Cache) SetBytes(key Key, value []byte) {
 	c.Set(key, value, int64(len(value)))
 }
 
 // GetBytes is like Get, but returns a bytes slice value.
 // It panics if value is not a byte slice.
-func (c *Cache) GetBytes(key string) (value []byte, ok bool) {
+func (c *Cache) GetBytes(key Key) (value []byte, ok bool) {
 	v, ok := c.Get(key)
 	if !ok {
 		return nil, false
