@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package cache implements LRU (Least Recently Used) cache algorithm.
+// Package lru implements Least Recently Used cache algorithm.
 //
 // Cache capacity can be optionally limited by both size in bytes and a number
 // of items. Items can keep track of their modification and access time.
