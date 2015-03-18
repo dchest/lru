@@ -17,9 +17,9 @@
 //  v, ok := c.Get("key")
 //  if !ok {
 //  	// Item is not in cache, fetch it from main storage...
-//    	x = ...
-//     // ...then add it to cache.
-//     c.Set("key", x, x.Size())
+//  	x = ...
+//  	// ...then add it to cache.
+//  	c.Set("key", x, x.Size())
 //  } else {
 //  	x = v.(someType)
 //  }
@@ -81,7 +81,7 @@ type Item struct {
 	Value      interface{}
 	Size       int64     // byte size of value
 	ModTime    time.Time // when this item was added to cache
-	AccessTime time.Time // when time this item was last accessed
+	AccessTime time.Time // when this item was last accessed
 }
 
 // New returns a cache instance configured with the given Config.
