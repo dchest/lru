@@ -3,6 +3,16 @@ Go package lru implements Least Recently Used cache algorithm.
 Cache capacity can be optionally limited by both size in bytes and a number
 of items. Items can keep track of their modification and access time.
 
+Stable version
+--------------
+
+A stable version of this package with commercial support is available
+through StableLib: https://stablelib.com/v1/lru
+
+
+Development version
+-------------------
+
 INSTALLATION
 
 	$ go get github.com/dchest/lru
