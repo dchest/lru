@@ -1,3 +1,3 @@
-module github.com/dchest/lru
+module github.com/dchest/lru/v2
 
-go 1.18
+go 1.26

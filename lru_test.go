@@ -10,26 +10,22 @@ import (
 	"time"
 )
 
-func getIntCheck(t *testing.T, c *Cache, key string, expectedValue int) {
+func getIntCheck(t *testing.T, c *Cache[string, int], key string, expectedValue int) {
 	v, ok := c.Get(key)
 	if !ok {
 		t.Fatalf("cache doesn't contain %q", key)
 	}
-	x, ok := v.(int)
-	if !ok {
-		t.Fatalf("retrieved value %v is not int", x)
-	}
-	if x != expectedValue {
-		t.Fatalf("wrong stored value: expected %d, got %d", expectedValue, x)
+	if v != expectedValue {
+		t.Fatalf("wrong stored value: expected %d, got %d", expectedValue, v)
 	}
 }
 
-func setInt(c *Cache, key string, value int) {
-	c.Set(key, value, 0)
+func setInt(c *Cache[string, int], key string, value int) {
+	c.Set(key, value)
 }
 
 func TestMaxItems(t *testing.T) {
-	c := New(Config{MaxItems: 3})
+	c := New[string, int](3)
 	setInt(c, "one", 1)
 	setInt(c, "two", 2)
 	setInt(c, "three", 3)
@@ -55,9 +51,9 @@ func TestMaxItems(t *testing.T) {
 	getIntCheck(t, c, "four", 4)
 
 	// Check that "one" is the oldest item.
-	it, _ := c.OldestItem()
-	if it.Key != "one" {
-		t.Fatalf("oldest item is %s, expected %s", it.Key, "one")
+	key, _, _, _ := c.Oldest()
+	if key != "one" {
+		t.Fatalf("oldest item is %s, expected %s", key, "one")
 	}
 
 	// Replace element's value.
@@ -67,22 +63,21 @@ func TestMaxItems(t *testing.T) {
 
 func TestMaxBytes(t *testing.T) {
 	removeCalled := 0
-	c := New(Config{
-		MaxBytes:      1000,
-		RemoveHandler: func(it Item) { removeCalled++ },
-	})
+	c := New[string, []byte](0).
+		WithMaxBytes(1000).
+		WithEvict(func(key string, value []byte) { removeCalled++ })
 	b := make([]byte, 100)
 	// Add 1100 bytes.
 	for i := 0; i < 11; i++ {
-		c.SetBytes(strconv.Itoa(i), b)
+		c.SetBytes(strconv.Itoa(i), b, int64(cap(b)))
 	}
 	// Ensure there's no 0th item, as it should be dropped.
-	if _, ok := c.GetBytes("0"); ok {
+	if _, ok := c.Get("0"); ok {
 		t.Fatalf("cache didn't drop 0th item")
 	}
 	// Ensure items 1-10 exist.
 	for i := 1; i < 11; i++ {
-		if _, ok := c.GetBytes(strconv.Itoa(i)); !ok {
+		if _, ok := c.Get(strconv.Itoa(i)); !ok {
 			t.Fatalf("cache item %d doesn't exist", i)
 		}
 	}
@@ -92,8 +87,8 @@ func TestMaxBytes(t *testing.T) {
 }
 
 func TestExpiration(t *testing.T) {
-	c := New(Config{Expires: 1 * time.Millisecond})
-	c.Set("hello", "world", 0)
+	c := New[string, string](0).WithExpiration(1 * time.Millisecond)
+	c.Set("hello", "world")
 	time.Sleep(2 * time.Millisecond)
 	_, ok := c.Get("hello")
 	if ok {
@@ -101,32 +96,26 @@ func TestExpiration(t *testing.T) {
 	}
 }
 
-func benchSet(b *testing.B, config Config) {
-	c := New(config)
+func BenchmarkSet(b *testing.B) {
+	c := New[int, []byte](1000)
 	bs := make([]byte, 100)
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		c.SetBytes(strconv.Itoa(i), bs)
+	for i := 0; b.Loop(); i++ {
+		c.Set(i, bs)
 	}
 }
 
-func BenchmarkSet(b *testing.B) {
-	benchSet(b, Config{MaxItems: 1000})
-}
-
-func benchGet(b *testing.B, config Config) {
-	c := New(config)
-	c.SetBytes("test", make([]byte, 100))
-	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		c.Get("test")
+func BenchmarkSetBytes(b *testing.B) {
+	c := New[int, []byte](1000).WithMaxBytes(100 * 1000)
+	bs := make([]byte, 100)
+	for i := 0; b.Loop(); i++ {
+		c.SetBytes(i, bs, int64(len(bs)))
 	}
 }
 
 func BenchmarkGet(b *testing.B) {
-	benchGet(b, Config{MaxItems: 1000})
-}
-
-func BenchmarkGetTrackTime(b *testing.B) {
-	benchGet(b, Config{MaxItems: 1000, TrackAccessTime: true})
+	c := New[string, []byte](1000)
+	c.SetBytes("test", make([]byte, 100), 100)
+	for b.Loop() {
+		c.Get("test")
+	}
 }
